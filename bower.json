@@ -38,6 +38,10 @@
     "node_modules",
     "bower_components",
     "test",
-    "tests"
+    "tests",
+    "build",
+    "karma.conf.js",
+    "package.json",
+    "Gruntfile.js"
   ]
 }
