@@ -1,5 +1,5 @@
 /**
- * @license Angular UI Tree v2.1.4
+ * @license Angular UI Tree v2.1.5
  * (c) 2010-2014. https://github.com/JimLiu/angular-ui-tree
  * License: MIT
  */
@@ -48,6 +48,7 @@
           },
 
           setNodeAttribute: function(scope, attrName, val) {
+          	if (!scope.$modelValue) return null;
             var data = this.nodesData[scope.$modelValue.$$hashKey];
             if (!data) {
               data = {};
@@ -57,6 +58,7 @@
           },
 
           getNodeAttribute: function(scope, attrName) {
+          	if (!scope.$modelValue) return null;
             var data = this.nodesData[scope.$modelValue.$$hashKey];
             if (data) {
               return data[attrName];
@@ -356,8 +358,8 @@
 
   angular.module('ui.tree')
 
-    .controller('TreeNodesController', ['$scope', '$element', '$timeout', 'treeConfig',
-      function ($scope, $element, $timeout, treeConfig) {
+    .controller('TreeNodesController', ['$scope', '$element', 'treeConfig',
+      function ($scope, $element, treeConfig) {
         this.scope = $scope;
 
         $scope.$element = $element;
@@ -371,12 +373,12 @@
         $scope.maxDepth = 0;
 
         $scope.initSubNode = function(subNode) {
-          $timeout(function() {
-            $scope.$nodesMap[subNode.$modelValue.$$hashKey] = subNode;
-          });
+          if(!subNode.$modelValue) return null;
+          $scope.$nodesMap[subNode.$modelValue.$$hashKey] = subNode;
         };
 
         $scope.destroySubNode = function(subNode) {
+          if(!subNode.$modelValue) return null;
           $scope.$nodesMap[subNode.$modelValue.$$hashKey] = null;
         };
 
