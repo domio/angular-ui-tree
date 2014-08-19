@@ -224,9 +224,12 @@
                 // move horizontal
                 if (pos.dirAx && pos.distAxX >= config.levelThreshold) {
                   pos.distAxX = 0;
-
+                  var dragElemLeft = $uiTreeHelper.offset(dragElm).left;
+                  var placeElemLeft = $uiTreeHelper.offset(placeElm).left;
+                  var increase = (dragElemLeft - placeElemLeft) >= config.levelThreshold;
+                  var decrease = (placeElemLeft - dragElemLeft) >= config.levelThreshold;
                   // increase horizontal level if previous sibling exists and is not collapsed
-                  if (pos.distX > 0) {
+                  if (pos.distX > 0 && increase) {
                     prev = dragInfo.prev();
                     if (prev && !prev.collapsed
                       && prev.accept(scope, prev.childNodesCount())) {
@@ -236,7 +239,7 @@
                   }
 
                   // decrease horizontal level
-                  if (pos.distX < 0) {
+                  if (pos.distX < 0 && decrease) {
                     // we can't decrease a level if an item preceeds the current one
                     var next = dragInfo.next();
                     if (!next) {
@@ -252,7 +255,7 @@
 
                 // check if add it as a child node first
                 // todo decrease is unused
-                var decrease = ($uiTreeHelper.offset(dragElm).left - $uiTreeHelper.offset(placeElm).left) >= config.threshold;
+
                 var targetX = eventObj.pageX - $window.document.body.scrollLeft;
                 var targetY = eventObj.pageY - (window.pageYOffset || $window.document.documentElement.scrollTop);
 
