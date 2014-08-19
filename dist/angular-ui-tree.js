@@ -1022,7 +1022,7 @@
                 }
 
                 // move horizontal
-                if (pos.dirAx && pos.distAxX >= config.levelThreshold) {
+                if (pos.dirAx && pos.distAxX >= 2) {
                   pos.distAxX = 0;
                   var dragElemLeft = $uiTreeHelper.offset(dragElm).left;
                   var placeElemLeft = $uiTreeHelper.offset(placeElm).left;
