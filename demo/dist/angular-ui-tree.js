@@ -312,7 +312,7 @@
         $scope.emptyPlaceHolderEnabled = true;
         $scope.maxDepth = 0;
         $scope.dragDelay = 0;
-
+        $scope.dragDistance = 0;
         // Check if it's a empty tree
         $scope.isEmpty = function() {
           return ($scope.$nodesScope && $scope.$nodesScope.$modelValue
@@ -679,6 +679,12 @@
             }
           });
 
+          scope.$watch(attrs.dragDistance, function(val) {
+            if((typeof val) == "number") {
+              scope.dragDistance = val;
+            }
+          });
+
           // check if the dest node can accept the dragging node
           // by default, we check the 'data-nodrop' attribute in `ui-tree-nodes`
           // and the 'max-depth' attribute in `ui-tree` or `ui-tree-nodes`.
@@ -844,7 +850,43 @@
                 document_height,
                 document_width;
 
-            var dragStart = function(e) {
+            var dragStart = function (e) {
+              if (scope.dragDistance > 0) {
+                var eventObj = $uiTreeHelper.eventObj(e);
+                pos = $uiTreeHelper.positionStarted(eventObj, scope.$element);
+                var tempMoveFunction = function (tempEvent) {
+                  tempEvent.preventDefault();
+                  var distance = Math.floor(Math.sqrt(Math.pow(tempEvent.pageX - pos.startX, 2) + Math.pow(tempEvent.pageY - pos.startY, 2)));
+                  if (distance >= scope.dragDistance) {
+                    angular.element($document).unbind('touchmove');
+                    angular.element($document).unbind('mousemove');
+                    angular.element($document).unbind('touchend');
+                    angular.element($document).unbind('touchcancel');
+                    angular.element($document).unbind('mouseup');
+                    drag(e);
+                  }
+                };
+                angular.element($document).bind('touchmove', tempMoveFunction);
+                angular.element($document).bind('mousemove', tempMoveFunction);
+                var tempEndFunction = function (tempEvent) {
+                  tempEvent.preventDefault();
+                  angular.element($document).unbind('touchmove');
+                  angular.element($document).unbind('mousemove');
+                  angular.element($document).unbind('touchend');
+                  angular.element($document).unbind('touchcancel');
+                  angular.element($document).unbind('mouseup');
+                  dragEndEvent(tempEvent);
+                };
+                angular.element($document).bind('touchend', tempEndFunction);
+                angular.element($document).bind('touchcancel', tempEndFunction);
+                angular.element($document).bind('mouseup', tempEndFunction);
+              }
+              else {
+                drag(e);
+              }
+            };
+
+            var drag = function (e) {
               if (!hasTouch && (e.button == 2 || e.which == 3)) {
                 // disable right click
                 return;
@@ -1209,8 +1251,10 @@
               element.bind('touchstart mousedown', function (e) {
                 dragDelaying = true;
                 dragStarted = false;
-                dragStartEvent(e);
-                dragTimer = $timeout(function(){dragDelaying = false;}, scope.dragDelay);
+                dragTimer = $timeout(function () {
+                  dragStartEvent(e);
+                  dragDelaying = false;
+                }, scope.dragDelay);
               });
               element.bind('touchend touchcancel mouseup',function(){$timeout.cancel(dragTimer);});
             };
