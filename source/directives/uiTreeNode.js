@@ -3,13 +3,13 @@
 
   angular.module('ui.tree')
 
-    .directive('uiTreeNode', ['treeConfig', '$uiTreeHelper', '$window', '$document','$timeout',
+    .directive('uiTreeNode', ['treeConfig', '$uiTreeHelper', '$window', '$document', '$timeout',
       function (treeConfig, $uiTreeHelper, $window, $document, $timeout) {
         return {
           require: ['^uiTreeNodes', '^uiTree'],
           restrict: 'A',
           controller: 'TreeNodeController',
-          link: function(scope, element, attrs, controllersArr) {
+          link: function (scope, element, attrs, controllersArr) {
             var config = {};
             angular.extend(config, treeConfig);
             if (config.nodeClass) {
@@ -19,13 +19,13 @@
 
             scope.collapsed = !!$uiTreeHelper.getNodeAttribute(scope, 'collapsed');
 
-            scope.$watch(attrs.collapsed, function(val) {
-              if((typeof val) == "boolean") {
+            scope.$watch(attrs.collapsed, function (val) {
+              if ((typeof val) == "boolean") {
                 scope.collapsed = val;
               }
             });
 
-            scope.$watch('collapsed', function(val) {
+            scope.$watch('collapsed', function (val) {
               $uiTreeHelper.setNodeAttribute(scope, 'collapsed', val);
               attrs.$set('collapsed', val);
             });
@@ -40,47 +40,14 @@
             var dragStarted = false;
             var dragTimer = null;
             var body = document.body,
-                html = document.documentElement,
-                document_height,
-                document_width;
+              html = document.documentElement,
+              document_height,
+              document_width,
+              hasBound,
+              boundOffset;
+
 
             var dragStart = function (e) {
-              if (scope.dragDistance > 0) {
-                var eventObj = $uiTreeHelper.eventObj(e);
-                pos = $uiTreeHelper.positionStarted(eventObj, scope.$element);
-                var tempMoveFunction = function (tempEvent) {
-                  tempEvent.preventDefault();
-                  var distance = Math.floor(Math.sqrt(Math.pow(tempEvent.pageX - pos.startX, 2) + Math.pow(tempEvent.pageY - pos.startY, 2)));
-                  if (distance >= scope.dragDistance) {
-                    angular.element($document).unbind('touchmove');
-                    angular.element($document).unbind('mousemove');
-                    angular.element($document).unbind('touchend');
-                    angular.element($document).unbind('touchcancel');
-                    angular.element($document).unbind('mouseup');
-                    drag(e);
-                  }
-                };
-                angular.element($document).bind('touchmove', tempMoveFunction);
-                angular.element($document).bind('mousemove', tempMoveFunction);
-                var tempEndFunction = function (tempEvent) {
-                  tempEvent.preventDefault();
-                  angular.element($document).unbind('touchmove');
-                  angular.element($document).unbind('mousemove');
-                  angular.element($document).unbind('touchend');
-                  angular.element($document).unbind('touchcancel');
-                  angular.element($document).unbind('mouseup');
-                  dragEndEvent(tempEvent);
-                };
-                angular.element($document).bind('touchend', tempEndFunction);
-                angular.element($document).bind('touchcancel', tempEndFunction);
-                angular.element($document).bind('mouseup', tempEndFunction);
-              }
-              else {
-                drag(e);
-              }
-            };
-
-            var drag = function (e) {
               if (!hasTouch && (e.button == 2 || e.which == 3)) {
                 // disable right click
                 return;
@@ -120,7 +87,7 @@
                 eventElm = eventElm.parent();
               }
 
-              if (!scope.beforeDrag(scope)){
+              if (!scope.beforeDrag(scope, e)) {
                 return;
               }
 
@@ -138,11 +105,11 @@
               if (tagName.toLowerCase() === 'tr') {
                 placeElm = angular.element($window.document.createElement(tagName));
                 var tdElm = angular.element($window.document.createElement('td'))
-                              .addClass(config.placeHolderClass);
+                  .addClass(config.placeHolderClass);
                 placeElm.append(tdElm);
               } else {
                 placeElm = angular.element($window.document.createElement(tagName))
-                              .addClass(config.placeHolderClass);
+                  .addClass(config.placeHolderClass);
               }
               hiddenPlaceElm = angular.element($window.document.createElement(tagName));
               if (config.hiddenClass) {
@@ -152,7 +119,7 @@
               placeElm.css('height', $uiTreeHelper.height(scope.$element) + 'px');
               placeElm.css('width', $uiTreeHelper.width(scope.$element) + 'px');
               dragElm = angular.element($window.document.createElement(scope.$parentNodesScope.$element.prop('tagName')))
-                        .addClass(scope.$parentNodesScope.$element.attr('class')).addClass(config.dragClass);
+                .addClass(scope.$parentNodesScope.$element.attr('class')).addClass(config.dragClass);
               dragElm.css('width', $uiTreeHelper.width(scope.$element) + 'px');
               dragElm.css('z-index', 9999);
 
@@ -168,8 +135,8 @@
               dragElm.append(scope.$element);
               $document.find('body').append(dragElm);
               dragElm.css({
-                'left' : eventObj.pageX - pos.offsetX + 'px',
-                'top'  : eventObj.pageY - pos.offsetY + 'px'
+                'left': eventObj.pageX - pos.offsetX + 'px',
+                'top': eventObj.pageY - pos.offsetY + 'px'
               });
               elements = {
                 placeholder: placeElm,
@@ -185,13 +152,17 @@
 
               document_height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
               document_width = Math.max(body.scrollWidth, body.offsetWidth, html.clientWidth, html.scrollWidth, html.offsetWidth);
+              var hasBound = (scope.boundTo && scope.boundTo.length !== 0);
+              if (hasBound) {
+                boundOffset = $uiTreeHelper.offset(scope.boundTo);
+              }
             };
 
-            var dragMove = function(e) {
+            var dragMove = function (e) {
               if (!dragStarted) {
                 if (!dragDelaying) {
                   dragStarted = true;
-                  scope.$apply(function() {
+                  scope.$apply(function () {
                     scope.$callbacks.dragStart(dragInfo.eventArgs(elements, pos));
                   });
                 }
@@ -199,7 +170,7 @@
               }
 
               var eventObj = $uiTreeHelper.eventObj(e);
-              var prev, leftElmPos, topElmPos;
+              var prev, leftElmPos, originLeftElmPos, topElmPos, originTopElmPos;
 
               if (dragElm) {
                 e.preventDefault();
@@ -213,24 +184,37 @@
                 leftElmPos = eventObj.pageX - pos.offsetX;
                 topElmPos = eventObj.pageY - pos.offsetY;
 
-                //dragElm can't leave the screen on the left
-                if(leftElmPos < 0){
-                  leftElmPos = 0;
+                //dragElm can't leave the screen or the bounding parent on the left
+                if ((!hasBound && leftElmPos < 0) || (hasBound && leftElmPos < boundOffset.left)) {
+                  leftElmPos = (!hasBound) ? 0 : boundOffset.left;
                 }
 
-                //dragElm can't leave the screen on the top
-                if(topElmPos < 0){
-                  topElmPos = 0;
+                //dragElm can't leave the screen or the bounding parent on the top
+                if ((!hasBound && topElmPos < 0) || (hasBound && topElmPos < boundOffset.top)) {
+                  topElmPos = (!hasBound) ? 0 : boundOffset.top;
                 }
 
-                //dragElm can't leave the screen on the bottom
-                if ((topElmPos + 10) > document_height){
-                  topElmPos = document_height - 10;
+                var handleElement = scope.$element.find('.angular-ui-tree-handle');
+                var handleHeight = (handleElement.length) ? $uiTreeHelper.height(handleElement) : 10;
+
+                //dragElm can't leave the screen or the bounding parent on the bottom
+                if ((!hasBound && (topElmPos + handleHeight) > document_height) || (hasBound && (topElmPos + handleHeight) > (boundOffset.top + boundOffset.height))) {
+                  topElmPos = (!hasBound) ? (document_height - handleHeight) : ((boundOffset.top + boundOffset.height) - handleHeight);
                 }
 
-                //dragElm can't leave the screen on the right
-                if((leftElmPos + 10) > document_width) {
-                  leftElmPos = document_width - 10;
+                var elmWidth = $uiTreeHelper.width(scope.$element);
+                //dragElm can't leave the screen or the bounding parent on the right
+                if ((!hasBound && (leftElmPos + elmWidth) > document_width)
+                  || (hasBound && (leftElmPos + elmWidth) > (boundOffset.left + boundOffset.width))) {
+                  leftElmPos = (!hasBound) ? (document_width - elmWidth) : ((boundOffset.left + boundOffset.width) - elmWidth);
+                }
+
+                if (scope.lockY) {
+                  topElmPos = originTopElmPos;
+                }
+
+                if (scope.lockX) {
+                  leftElmPos = originLeftElmPos;
                 }
 
                 dragElm.css({
@@ -301,7 +285,7 @@
                 var displayElm;
                 if (angular.isFunction(dragElm.hide)) {
                   dragElm.hide();
-                }else{
+                } else {
                   displayElm = dragElm[0].style.display;
                   dragElm[0].style.display = "none";
                 }
@@ -313,7 +297,7 @@
                 var targetElm = angular.element($window.document.elementFromPoint(targetX, targetY));
                 if (angular.isFunction(dragElm.show)) {
                   dragElm.show();
-                }else{
+                } else {
                   dragElm[0].style.display = displayElm;
                 }
 
@@ -349,11 +333,11 @@
                       targetNode.place(placeElm);
                       dragInfo.moveTo(targetNode.$nodesScope, targetNode.$nodesScope.childNodes(), 0);
                     }
-                  } else if (targetNode.dragEnabled()){ // drag enabled
+                  } else if (targetNode.dragEnabled()) { // drag enabled
                     targetElm = targetNode.$element; // Get the element of ui-tree-node
                     var targetOffset = $uiTreeHelper.offset(targetElm);
                     targetBefore = targetNode.horizontal ? eventObj.pageX < (targetOffset.left + $uiTreeHelper.width(targetElm) / 2)
-                                                         : eventObj.pageY < (targetOffset.top + $uiTreeHelper.height(targetElm) / 2);
+                      : eventObj.pageY < (targetOffset.top + $uiTreeHelper.height(targetElm) / 2);
 
                     if (targetNode.$parentNodesScope.accept(scope, targetNode.index())) {
                       if (targetBefore) {
@@ -372,17 +356,17 @@
 
                 }
 
-                scope.$apply(function() {
+                scope.$apply(function () {
                   scope.$callbacks.dragMove(dragInfo.eventArgs(elements, pos));
                 });
               }
             };
 
-            var dragEnd = function(e) {
+            var dragEnd = function (e) {
               e.preventDefault();
 
               if (dragElm) {
-                scope.$treeScope.$apply(function() {
+                scope.$treeScope.$apply(function () {
                   scope.$callbacks.beforeDrop(dragInfo.eventArgs(elements, pos));
                 });
                 // roll back elements changed
@@ -393,13 +377,13 @@
                 dragElm = null;
                 if (scope.$$apply) {
                   dragInfo.apply();
-                  scope.$treeScope.$apply(function() {
+                  scope.$treeScope.$apply(function () {
                     scope.$callbacks.dropped(dragInfo.eventArgs(elements, pos));
                   });
                 } else {
                   bindDrag();
                 }
-                scope.$treeScope.$apply(function() {
+                scope.$treeScope.$apply(function () {
                   scope.$callbacks.dragStop(dragInfo.eventArgs(elements, pos));
                 });
                 scope.$$apply = false;
@@ -422,39 +406,41 @@
               angular.element($window.document.body).unbind('mouseleave', dragCancelEvent);
             };
 
-            var dragStartEvent = function(e) {
+            var dragStartEvent = function (e) {
               if (scope.dragEnabled()) {
                 dragStart(e);
               }
             };
 
-            var dragMoveEvent = function(e) {
+            var dragMoveEvent = function (e) {
               dragMove(e);
             };
 
-            var dragEndEvent = function(e) {
+            var dragEndEvent = function (e) {
               scope.$$apply = true;
               dragEnd(e);
             };
 
-            var dragCancelEvent = function(e) {
+            var dragCancelEvent = function (e) {
               dragEnd(e);
             };
 
-            var bindDrag = function() {
+            var bindDrag = function () {
               element.bind('touchstart mousedown', function (e) {
                 dragDelaying = true;
                 dragStarted = false;
+                dragStartEvent(e);
                 dragTimer = $timeout(function () {
-                  dragStartEvent(e);
                   dragDelaying = false;
                 }, scope.dragDelay);
               });
-              element.bind('touchend touchcancel mouseup',function(){$timeout.cancel(dragTimer);});
+              element.bind('touchend touchcancel mouseup', function () {
+                $timeout.cancel(dragTimer);
+              });
             };
             bindDrag();
 
-            angular.element($window.document.body).bind("keydown", function(e) {
+            angular.element($window.document.body).bind("keydown", function (e) {
               if (e.keyCode == 27) {
                 scope.$$apply = false;
                 dragEnd(e);
