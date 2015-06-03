@@ -40,6 +40,7 @@
     "test",
     "tests",
     "build",
+    "demo",
     "karma.conf.js",
     "package.json",
     "Gruntfile.js"
